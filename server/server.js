@@ -88,6 +88,18 @@ if (fs.existsSync(clientDistPath)) {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Connect DB on serverless invocation if running on Vercel
+let dbPromise = null;
+app.use(async (req, res, next) => {
+  if (process.env.VERCEL && !dbPromise) {
+    dbPromise = connectDB().catch((err) => {
+      console.warn('[db] Serverless connect notice:', err.message);
+    });
+  }
+  if (dbPromise) await dbPromise;
+  next();
+});
+
 async function start() {
   await connectDB();
 
@@ -114,4 +126,10 @@ async function start() {
   }
 }
 
-start();
+if (!process.env.VERCEL) {
+  start();
+}
+
+export { app, start };
+export default app;
+

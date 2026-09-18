@@ -2,6 +2,7 @@
   "name": "genai-chatbot-app",
   "version": "1.0.0",
   "description": "Multilingual AI Chatbot",
+  "type": "module",
   "scripts": {
     "start": "node server/server.js",
     "deploy": "npm run build --prefix client && node server/server.js",
@@ -9,5 +10,17 @@
     "client": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
     "db:init": "node server/scripts/initDatabase.js"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "mongoose": "^8.5.2",
+    "morgan": "^1.10.0",
+    "openai": "^4.56.0",
+    "uuid": "^9.0.1"
   }
 }
