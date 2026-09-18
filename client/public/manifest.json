@@ -1,0 +1,18 @@
+﻿{
+  "short_name": "Aetheris AI",
+  "name": "Aetheris AI - Multilingual Conversational Studio",
+  "description": "Sleek, production-grade Generative AI web studio with human-like conversation across 15+ world languages.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#05060a",
+  "theme_color": "#05060a",
+  "display": "standalone",
+  "orientation": "portrait"
+}

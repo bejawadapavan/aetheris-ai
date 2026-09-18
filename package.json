@@ -1,0 +1,13 @@
+﻿{
+  "name": "genai-chatbot-app",
+  "version": "1.0.0",
+  "description": "Multilingual AI Chatbot",
+  "scripts": {
+    "start": "node server/server.js",
+    "deploy": "npm run build --prefix client && node server/server.js",
+    "server": "node server/server.js",
+    "client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "db:init": "node server/scripts/initDatabase.js"
+  }
+}
