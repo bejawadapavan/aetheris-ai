@@ -12,13 +12,13 @@
       - key: PORT
         value: 10000
       - key: MONGODB_URI
-        sync: false
+        value: skip
       - key: OPENAI_API_KEY
-        sync: false
+        value: skip
       - key: OPENAI_MODEL
         value: gpt-4o-mini
       - key: CLIENT_URL
-        sync: false
+        value: '*'
       - key: RATE_LIMIT_WINDOW_MS
         value: 60000
       - key: RATE_LIMIT_MAX_REQUESTS

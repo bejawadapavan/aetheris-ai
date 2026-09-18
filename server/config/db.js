@@ -5,9 +5,9 @@ let isConnected = false;
 export async function connectDB() {
   const uri = process.env.MONGODB_URI;
 
-  if (!uri) {
+  if (!uri || ['skip', 'none', 'temp', 'placeholder'].includes(uri.trim().toLowerCase())) {
     console.warn(
-      '[db] MONGODB_URI not set. The app will run, but conversation persistence will fail.'
+      '[db] MONGODB_URI not set or skipped. Running in autonomous mode without persistence.'
     );
     return;
   }
