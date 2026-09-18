@@ -32,16 +32,18 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:5173',
   'http://localhost:5000',
+  'http://localhost:8000',
+  'http://localhost:3000',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5000',
+  'http://127.0.0.1:8000',
+  'http://127.0.0.1:3000',
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-        return callback(null, true);
-      }
+      // allow localhost, 127.0.0.1, or same-origin requests
       return callback(null, true);
     },
     credentials: true,
@@ -61,21 +63,21 @@ const limiter = rateLimit({
 });
 app.use('/api/chat', limiter);
 
-// --- Health check ---
-app.get('/api/health', (req, res) => {
+// --- Health check aliases ---
+app.get(['/api/health', '/health', '/api/v1/health'], (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// --- Routes ---
-app.use('/api/chat', chatRoutes);
-app.use('/api/conversations', conversationRoutes);
+// --- Routes & Aliases ---
+app.use(['/api/chat', '/chat', '/api/generate', '/generate', '/api/v1/chat'], chatRoutes);
+app.use(['/api/conversations', '/conversations'], conversationRoutes);
 app.use('/api/database', databaseRoutes);
 
 // --- Static assets & SPA fallback (production / deployed local) ---
 if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) {
+    if (req.path.startsWith('/api') || req.path.startsWith('/chat') || req.path.startsWith('/generate')) {
       return next();
     }
     res.sendFile(path.join(clientDistPath, 'index.html'));
@@ -88,10 +90,28 @@ app.use(errorHandler);
 
 async function start() {
   await connectDB();
-  app.listen(PORT, () => {
+
+  // Primary server (default 5000)
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 GenAI Chatbot API running on http://localhost:${PORT}`);
-    console.log(`   Health check: http://localhost:${PORT}/api/health\n`);
+    console.log(`   Health check: http://localhost:${PORT}/api/health`);
   });
+
+  // Secondary listener on port 8000 for clients expecting localhost:8000
+  if (Number(PORT) !== 8000) {
+    try {
+      const server8000 = app.listen(8000, '0.0.0.0', () => {
+        console.log(`🚀 Also listening on http://localhost:8000 (connected for localhost:8000 frontends)\n`);
+      });
+      server8000.on('error', (err) => {
+        if (err.code !== 'EADDRINUSE') {
+          console.warn('Port 8000 listener notice:', err.message);
+        }
+      });
+    } catch (e) {
+      // ignore
+    }
+  }
 }
 
 start();

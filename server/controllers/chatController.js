@@ -8,13 +8,83 @@ import { isDbConnected } from '../config/db.js';
  * Streams the assistant's reply back to the client via Server-Sent Events.
  */
 export async function handleChatStream(req, res) {
-  const { conversationId, message, persona = 'empathetic-friend', language = 'auto' } = req.body;
+  const { conversationId, persona = 'empathetic-friend', language = 'auto' } = req.body || {};
 
-  if (!message || typeof message !== 'string' || !message.trim()) {
-    return res.status(400).json({ error: 'A non-empty "message" field is required.' });
+  const rawMessage =
+    req.body?.message ||
+    req.body?.prompt ||
+    req.body?.query ||
+    req.body?.text ||
+    req.body?.input ||
+    (Array.isArray(req.body?.messages) && req.body.messages[req.body.messages.length - 1]?.content);
+
+  const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+
+  if (!message) {
+    return res.status(400).json({ error: 'A non-empty "message" or "prompt" field is required.' });
   }
 
-  // Set up SSE headers
+  const wantsJson =
+    req.query?.stream === 'false' ||
+    req.body?.stream === false ||
+    (req.headers.accept?.includes('application/json') && !req.headers.accept?.includes('text/event-stream'));
+
+  let conversation = null;
+  const dbAvailable = isDbConnected();
+
+  if (dbAvailable) {
+    try {
+      if (conversationId) {
+        conversation = await Conversation.findById(conversationId);
+      }
+      if (!conversation) {
+        conversation = new Conversation({ persona, language, messages: [] });
+      }
+      conversation.persona = persona;
+      conversation.language = language;
+      conversation.messages.push({ role: 'user', content: message });
+    } catch (e) {
+      console.warn('[chat] DB conversation lookup error:', e.message);
+    }
+  }
+
+  const history = dbAvailable && conversation
+    ? conversation.messages.map((m) => ({ role: m.role, content: m.content }))
+    : [{ role: 'user', content: message }];
+
+  // Standard JSON response mode
+  if (wantsJson) {
+    try {
+      let assembled = await streamChatCompletion({
+        messages: history,
+        persona,
+        language,
+        onToken: () => {},
+      });
+
+      if (dbAvailable && conversation) {
+        conversation.messages.push({ role: 'assistant', content: assembled });
+        if (conversation.messages.length === 2) {
+          conversation.title = await generateConversationTitle(message);
+        }
+        await conversation.save().catch(() => {});
+      }
+
+      return res.json({
+        reply: assembled,
+        response: assembled,
+        message: assembled,
+        text: assembled,
+        conversationId: conversation?._id?.toString() || null,
+        title: conversation?.title || null,
+      });
+    } catch (err) {
+      console.error('[chat] json error:', err.message);
+      return res.status(500).json({ error: err.message || 'Error generating response' });
+    }
+  }
+
+  // SSE streaming mode
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
@@ -27,27 +97,7 @@ export async function handleChatStream(req, res) {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  let conversation = null;
-  const dbAvailable = isDbConnected();
-
   try {
-    if (dbAvailable) {
-      if (conversationId) {
-        conversation = await Conversation.findById(conversationId);
-      }
-      if (!conversation) {
-        conversation = new Conversation({ persona, language, messages: [] });
-      }
-      conversation.persona = persona;
-      conversation.language = language;
-      conversation.messages.push({ role: 'user', content: message });
-    }
-
-    // Build history for the model: prior turns + the new user message
-    const history = dbAvailable
-      ? conversation.messages.map((m) => ({ role: m.role, content: m.content }))
-      : [{ role: 'user', content: message }];
-
     send('start', { conversationId: conversation?._id?.toString() || null });
 
     let assembled = '';
@@ -60,15 +110,12 @@ export async function handleChatStream(req, res) {
       },
     });
 
-    if (dbAvailable) {
+    if (dbAvailable && conversation) {
       conversation.messages.push({ role: 'assistant', content: assembled });
-
-      // Auto-title new conversations after the first exchange
       if (conversation.messages.length === 2) {
         conversation.title = await generateConversationTitle(message);
       }
-
-      await conversation.save();
+      await conversation.save().catch(() => {});
     }
 
     send('done', {

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import ParticleCanvas from './components/ParticleCanvas.jsx';
 import HeaderNav from './components/HeaderNav.jsx';
 import ApiKeyModal from './components/ApiKeyModal.jsx';
@@ -18,6 +18,11 @@ export default function App() {
 
   const handleLogMetric = (newMetric) => {
     setMetrics((prev) => [newMetric, ...prev].slice(0, 50));
+    fetch('/api/database/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMetric),
+    }).catch(() => {});
   };
 
   return (
