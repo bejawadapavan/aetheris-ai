@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   Sparkles,
   MessageSquare,
@@ -10,6 +10,8 @@ import {
   VolumeX,
   Globe,
   Radio,
+  UserCheck,
+  LogOut,
 } from 'lucide-react';
 import { WORLD_LANGUAGES } from '../services/geminiService.js';
 
@@ -22,6 +24,8 @@ export default function HeaderNav({
   onLanguageChange,
   currentModel,
   onOpenSettings,
+  currentUser,
+  onLogout,
 }) {
   const currentLangObj = WORLD_LANGUAGES.find((l) => l.code === language) || WORLD_LANGUAGES[0];
 
@@ -154,6 +158,24 @@ export default function HeaderNav({
           >
             <Settings size={16} />
           </button>
+
+          {/* User Session & Logout */}
+          {currentUser && (
+            <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-slate-300" title={`Logged in as ${currentUser.email}`}>
+                <UserCheck size={14} className="text-emerald-400" />
+                <span className="font-mono text-[11px] max-w-[120px] truncate">{currentUser.name || currentUser.email}</span>
+              </div>
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold transition-all"
+                title="Sign out of session"
+              >
+                <LogOut size={13} />
+                <span className="hidden lg:inline">Sign Out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

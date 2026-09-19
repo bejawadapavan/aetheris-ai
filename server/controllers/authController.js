@@ -1,4 +1,4 @@
-﻿import crypto from 'crypto';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import { signToken } from '../middleware/auth.js';
 import { isDbConnected } from '../config/db.js';
@@ -83,41 +83,57 @@ export async function login(req, res) {
       });
     }
 
-    if (!isDbConnected()) {
-      // In-memory / guest demo login
-      const mockUser = {
-        id: 'user_demo_' + Date.now(),
-        name: email.split('@')[0],
-        email: email.toLowerCase(),
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if database has the user or if it's the demo account
+    let user = null;
+    if (isDbConnected()) {
+      user = await User.findOne({ email: normalizedEmail }).select('+password');
+    }
+
+    // Default mock demo credentials: user@example.com / password123
+    const isMockAccount = normalizedEmail === 'user@example.com';
+
+    if (!user && !isMockAccount) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Email invalid',
+        field: 'email',
+      });
+    }
+
+    if (user) {
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Incorrect password',
+          field: 'password',
+        });
+      }
+    } else if (isMockAccount) {
+      if (password !== 'password123') {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Incorrect password',
+          field: 'password',
+        });
+      }
+      user = {
+        id: 'demo_user_123',
+        name: 'Demo User',
+        email: 'user@example.com',
         role: 'user',
+        toSafeObject() {
+          return { id: this.id, name: this.name, email: this.email, role: this.role };
+        },
       };
-      const token = signToken(mockUser);
-      return res.json({
-        status: 'success',
-        message: 'Logged in successfully (autonomous mode)',
-        token,
-        user: mockUser,
-      });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    if (!user) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid email or password.',
-      });
-    }
-
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid email or password.',
-      });
     }
 
     user.lastLoginAt = new Date();
-    await user.save();
+    if (typeof user.save === 'function') {
+      await user.save().catch(() => {});
+    }
 
     const token = signToken(user);
     return res.json({
