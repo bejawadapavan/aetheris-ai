@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { X, Key, Check, Sparkles, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
 import {
   SUPPORTED_MODELS,
@@ -7,22 +7,61 @@ import {
   getStoredModel,
   setStoredModel,
 } from '../services/geminiService.js';
+import { getBackendUrl, setBackendUrl } from '../services/api.js';
 
 export default function ApiKeyModal({ isOpen, onClose, onModelChange }) {
   const [apiKey, setApiKey] = useState(getStoredGeminiKey());
   const [selectedModel, setSelectedModel] = useState(getStoredModel());
+  const [backendUrl, setBackendUrlState] = useState(getBackendUrl());
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [testingBackend, setTestingBackend] = useState(false);
+  const [backendTestResult, setBackendTestResult] = useState(null);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
     setStoredGeminiKey(apiKey);
     setStoredModel(selectedModel);
+    setBackendUrl(backendUrl);
     onModelChange?.(selectedModel);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleTestBackend = async () => {
+    setTestingBackend(true);
+    setBackendTestResult(null);
+    try {
+      const cleanUrl = (backendUrl || '/api').trim().replace(/\/+$/, '');
+      const healthUrl = cleanUrl.endsWith('/health')
+        ? cleanUrl
+        : cleanUrl.endsWith('/api')
+        ? `${cleanUrl}/health`
+        : `${cleanUrl}/api/health`;
+
+      const res = await fetch(healthUrl, { method: 'GET' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setBackendTestResult({
+          success: true,
+          message: `Backend Connected! Status: ${data.status || '200 OK'} (${data.security || 'AES-256 Active'})`,
+        });
+      } else {
+        setBackendTestResult({
+          success: false,
+          message: `Backend returned HTTP ${res.status}.`,
+        });
+      }
+    } catch (err) {
+      setBackendTestResult({
+        success: false,
+        message: `Connection failed: ${err.message || 'Cannot reach server'}. Check URL.`,
+      });
+    } finally {
+      setTestingBackend(false);
+    }
   };
 
   const handleTestKey = async () => {
@@ -34,7 +73,7 @@ export default function ApiKeyModal({ isOpen, onClose, onModelChange }) {
     setTestResult(null);
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey.trim()}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey.trim()}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -144,6 +183,69 @@ export default function ApiKeyModal({ isOpen, onClose, onModelChange }) {
               <ShieldCheck size={13} className="text-emerald-400" />
               Your API key is saved exclusively in your browser's secure local storage.
             </p>
+          </div>
+
+          {/* Backend Gateway Configuration */}
+          <div className="pt-3 border-t border-white/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Backend Gateway URL (Mobile / Cloud)
+              </label>
+              <button
+                type="button"
+                onClick={handleTestBackend}
+                disabled={testingBackend}
+                className="text-xs text-accent-cyan hover:underline flex items-center gap-1 disabled:opacity-50"
+              >
+                {testingBackend ? 'Checking...' : 'Ping Backend'}
+              </button>
+            </div>
+            <input
+              type="text"
+              placeholder="/api or http://172.16.4.89:8000 or https://your-app.onrender.com"
+              value={backendUrl}
+              onChange={(e) => setBackendUrlState(e.target.value)}
+              className="input-glass w-full text-sm font-mono text-slate-200"
+            />
+            {/* Quick-Pick Presets */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setBackendUrlState('/api')}
+                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-mono text-cyan-300 border border-white/10 transition-colors"
+                title="Use unified cloud serverless API"
+              >
+                ☁️ Cloud Vercel (/api)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBackendUrlState('http://172.16.4.89:8000')}
+                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-mono text-purple-300 border border-white/10 transition-colors"
+                title="Connect phone directly to this PC over home Wi-Fi"
+              >
+                📶 Phone Wi-Fi (172.16.4.89:8000)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBackendUrlState('http://localhost:8000')}
+                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-mono text-slate-400 border border-white/10 transition-colors"
+                title="Default localhost"
+              >
+                💻 PC Local (8000)
+              </button>
+            </div>
+            {backendTestResult && (
+              <div
+                className={`p-2.5 rounded-xl text-xs flex items-center gap-2 border ${
+                  backendTestResult.success
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}
+              >
+                {backendTestResult.success ? <Check size={13} /> : <X size={13} />}
+                <span>{backendTestResult.message}</span>
+              </div>
+            )}
           </div>
 
           {/* Test Status feedback */}

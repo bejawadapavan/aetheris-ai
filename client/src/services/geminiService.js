@@ -7,6 +7,8 @@
  * - Autonomous human-like simulated fallback in 15+ languages
  */
 
+import { getBackendUrl } from './api.js';
+
 const STORAGE_KEYS = {
   GEMINI_KEY: 'aetheris_gemini_api_key',
   SELECTED_MODEL: 'aetheris_selected_model',
@@ -234,55 +236,84 @@ export async function generateStudioResponse({
     }
   }
 
-  // 2. Try Local Express Backend /api/chat if model is backend-proxy or fallback
-  if (model === 'backend-proxy') {
+  // 2. Try Express Backend /api/chat if model is backend-proxy or if apiKey is not configured on this device
+  if (model === 'backend-proxy' || !apiKey) {
     try {
-      const res = await fetch('/api/chat', {
+      const base = getBackendUrl();
+      const chatUrl = base.endsWith('/chat') ? base : `${base}/chat`;
+      const res = await fetch(chatUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream, application/json',
+        },
         body: JSON.stringify({ message, persona, language }),
       });
 
-      if (res.ok && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let full = '';
-        let buffer = '';
+      if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.includes('event: token')) {
-              const match = line.match(/data:\s*(.*)/);
-              if (match) {
-                try {
-                  const data = JSON.parse(match[1]);
-                  if (data.token) {
-                    full += data.token;
-                    onToken?.(data.token);
-                  }
-                } catch {}
-              }
-            }
+        // If response is standard JSON (e.g. from cloud API or fallback)
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          const reply = data.reply || data.response || data.message || '';
+          if (reply) {
+            onToken?.(reply);
+            const endTime = performance.now();
+            return {
+              content: reply,
+              latency: Math.round(endTime - startTime),
+              tokens: Math.round(reply.length / 4),
+              model: 'Backend Gateway (Express)',
+              provider: 'Cloud / Local Server',
+            };
           }
         }
 
-        const endTime = performance.now();
-        return {
-          content: full,
-          latency: Math.round(endTime - startTime),
-          tokens: Math.round(full.length / 4),
-          model: 'Local Backend (Express & Mongo)',
-          provider: 'Local Stack',
-        };
+        // Otherwise handle SSE Stream
+        if (res.body) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let full = '';
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.includes('event: token')) {
+                const match = line.match(/data:\s*(.*)/);
+                if (match) {
+                  try {
+                    const data = JSON.parse(match[1]);
+                    if (data.token) {
+                      full += data.token;
+                      onToken?.(data.token);
+                    }
+                  } catch {}
+                }
+              }
+            }
+          }
+
+          if (full) {
+            const endTime = performance.now();
+            return {
+              content: full,
+              latency: Math.round(endTime - startTime),
+              tokens: Math.round(full.length / 4),
+              model: 'Backend Gateway (Express & Mongo)',
+              provider: 'Cloud / Local Server',
+            };
+          }
+        }
       }
     } catch (err) {
-      console.warn('[Aetheris] Local backend request failed, using autonomous simulated engine');
+      console.warn('[Aetheris] Backend gateway call notice:', err.message);
     }
   }
 

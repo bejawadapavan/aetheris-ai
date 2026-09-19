@@ -1,3 +1,5 @@
+import { getBackendUrl } from './api.js';
+
 const AUTH_STORAGE_KEY = 'aetheris_auth_token';
 const USER_STORAGE_KEY = 'aetheris_user';
 
@@ -72,7 +74,9 @@ export async function authenticateUser({ email, password }) {
 
   // 1. Try backend authentication if reachable
   try {
-    const res = await fetch('/api/auth/login', {
+    const base = getBackendUrl();
+    const loginUrl = base.endsWith('/api') ? `${base}/auth/login` : `${base}/api/auth/login`;
+    const res = await fetch(loginUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),

@@ -1,10 +1,35 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+export const BACKEND_STORAGE_KEY = 'aetheris_custom_backend_url';
+
+export function getBackendUrl() {
+  try {
+    const custom = localStorage.getItem(BACKEND_STORAGE_KEY);
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, '');
+    }
+  } catch {}
+  return import.meta.env.VITE_API_URL || '/api';
+}
+
+export function setBackendUrl(url) {
+  try {
+    if (url && url.trim()) {
+      localStorage.setItem(BACKEND_STORAGE_KEY, url.trim().replace(/\/+$/, ''));
+    } else {
+      localStorage.removeItem(BACKEND_STORAGE_KEY);
+    }
+  } catch {}
+}
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: getBackendUrl(),
   headers: { 'Content-Type': 'application/json' },
+});
+
+api.interceptors.request.use((config) => {
+  config.baseURL = getBackendUrl();
+  return config;
 });
 
 export async function fetchConversations() {
@@ -55,7 +80,9 @@ export async function streamChat({
   signal,
 }) {
   try {
-    const response = await fetch(`${API_URL}/chat`, {
+    const base = getBackendUrl();
+    const endpoint = base.endsWith('/chat') ? base : `${base}/chat`;
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversationId, message, persona, language }),
