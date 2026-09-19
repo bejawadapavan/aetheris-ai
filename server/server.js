@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -13,6 +13,8 @@ import { connectDB } from './config/db.js';
 import chatRoutes from './routes/chat.js';
 import conversationRoutes from './routes/conversations.js';
 import databaseRoutes from './routes/database.js';
+import authRoutes from './routes/auth.js';
+import securityRoutes from './routes/security.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,41 +24,34 @@ const clientDistPath = path.resolve(__dirname, '../client/dist');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- Core middleware ---
+// --- Security & Core middleware ---
 app.use(
   helmet({
-    contentSecurityPolicy: false, // handled at the reverse-proxy / hosting layer
+    contentSecurityPolicy: false,
   })
 );
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:5000',
-  'http://localhost:8000',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5000',
-  'http://127.0.0.1:8000',
-  'http://127.0.0.1:3000',
-].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow localhost, 127.0.0.1, or same-origin requests
+      // Allow any origin for seamless local and mobile cross-origin access
       return callback(null, true);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'Accept', 'X-Requested-With'],
   })
 );
+
 app.use(compression());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
+app.use(express.urlencoded({ extended: true, limit: '4mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// --- Rate limiting (protects the AI endpoint from abuse) ---
+// --- Rate limiting ---
 const limiter = rateLimit({
   windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
-  max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 30,
+  max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please slow down and try again shortly.' },
@@ -65,19 +60,32 @@ app.use('/api/chat', limiter);
 
 // --- Health check aliases ---
 app.get(['/api/health', '/health', '/api/v1/health'], (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    security: 'AES-256-GCM + JWT Active',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // --- Routes & Aliases ---
 app.use(['/api/chat', '/chat', '/api/generate', '/generate', '/api/v1/chat'], chatRoutes);
-app.use(['/api/conversations', '/conversations'], conversationRoutes);
+app.use(['/api/conversations', '/conversations', '/api/sessions', '/sessions'], conversationRoutes);
 app.use('/api/database', databaseRoutes);
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/security', '/security'], securityRoutes);
 
-// --- Static assets & SPA fallback (production / deployed local) ---
+// --- Static assets & SPA fallback ---
 if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/chat') || req.path.startsWith('/generate')) {
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/chat') ||
+      req.path.startsWith('/generate') ||
+      req.path.startsWith('/auth') ||
+      req.path.startsWith('/security') ||
+      req.path.startsWith('/sessions')
+    ) {
       return next();
     }
     res.sendFile(path.join(clientDistPath, 'index.html'));
@@ -88,32 +96,22 @@ if (fs.existsSync(clientDistPath)) {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Connect DB on serverless invocation if running on Vercel
-let dbPromise = null;
-app.use(async (req, res, next) => {
-  if (process.env.VERCEL && !dbPromise) {
-    dbPromise = connectDB().catch((err) => {
-      console.warn('[db] Serverless connect notice:', err.message);
-    });
-  }
-  if (dbPromise) await dbPromise;
-  next();
-});
-
 async function start() {
   await connectDB();
 
   // Primary server (default 5000)
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 GenAI Chatbot API running on http://localhost:${PORT}`);
+    console.log(`\n🚀 Aetheris AI API & Security Gateway running on http://localhost:${PORT}`);
     console.log(`   Health check: http://localhost:${PORT}/api/health`);
+    console.log(`   Auth routes:  http://localhost:${PORT}/api/auth/login & /register`);
+    console.log(`   Security:     http://localhost:${PORT}/api/security/status (AES-256-GCM)`);
   });
 
   // Secondary listener on port 8000 for clients expecting localhost:8000
   if (Number(PORT) !== 8000) {
     try {
       const server8000 = app.listen(8000, '0.0.0.0', () => {
-        console.log(`🚀 Also listening on http://localhost:8000 (connected for localhost:8000 frontends)\n`);
+        console.log(`🚀 Also listening on http://localhost:8000 (Universal bridge for localhost:8000)\n`);
       });
       server8000.on('error', (err) => {
         if (err.code !== 'EADDRINUSE') {
@@ -126,10 +124,4 @@ async function start() {
   }
 }
 
-if (!process.env.VERCEL) {
-  start();
-}
-
-export { app, start };
-export default app;
-
+start();

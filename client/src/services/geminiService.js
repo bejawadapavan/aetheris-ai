@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Aetheris AI — Gemini & Multilingual Human Conversational Engine
  * Supports:
  * - gemini-3-flash-preview
