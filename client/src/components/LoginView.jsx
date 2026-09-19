@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Lock,
   Mail,
@@ -53,7 +53,7 @@ export default function LoginView({ onLoginSuccess }) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!cleanEmail || !emailRegex.test(cleanEmail)) {
       setErrors((prev) => ({ ...prev, email: 'Email invalid' }));
       return;
@@ -124,7 +124,7 @@ export default function LoginView({ onLoginSuccess }) {
                 <Lock size={18} className="text-accent-cyan" /> Sign In
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Authenticate your session to access the studio
+                Sign in with personal email or demo account
               </p>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -147,7 +147,7 @@ export default function LoginView({ onLoginSuccess }) {
                   id="email"
                   value={email}
                   onChange={handleEmailChange}
-                  placeholder="user@example.com"
+                  placeholder="name@example.com (or personal email)"
                   autoComplete="email"
                   disabled={isSubmitting}
                   className={`w-full pl-10 pr-4 py-3 rounded-xl bg-base-950/60 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-200 border ${

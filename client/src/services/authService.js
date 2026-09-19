@@ -1,4 +1,4 @@
-﻿const AUTH_STORAGE_KEY = 'aetheris_auth_token';
+const AUTH_STORAGE_KEY = 'aetheris_auth_token';
 const USER_STORAGE_KEY = 'aetheris_user';
 
 // Standard demo credentials for mock / offline fallback
@@ -29,9 +29,26 @@ export function logout() {
   localStorage.removeItem(USER_STORAGE_KEY);
 }
 
+const LOCAL_ACCOUNTS_KEY = 'aetheris_local_accounts';
+
+function getLocalAccounts() {
+  try {
+    const raw = localStorage.getItem(LOCAL_ACCOUNTS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalAccounts(accounts) {
+  try {
+    localStorage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch {}
+}
+
 /**
  * Authenticates user credentials against the backend auth service,
- * with graceful fallback to the requested demo credentials:
+ * supporting both personal email addresses and the standard demo credentials:
  * - Email: user@example.com
  * - Password: password123
  */
@@ -40,7 +57,7 @@ export async function authenticateUser({ email, password }) {
   const cleanPassword = (password || '').trim();
 
   // Basic email pattern check
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   if (!cleanEmail || !emailRegex.test(cleanEmail)) {
     const err = new Error('Email invalid');
     err.field = 'email';
@@ -70,12 +87,9 @@ export async function authenticateUser({ email, password }) {
     }
 
     if (res.status === 401 || res.status === 400) {
-      // Respect exact backend message or map fields
       const msg = data.message || data.error || 'Authentication failed';
       const isEmailIssue =
-        data.field === 'email' ||
-        msg.toLowerCase().includes('email') ||
-        (cleanEmail !== DEMO_CREDENTIALS.email);
+        data.field === 'email' || msg.toLowerCase().includes('email');
 
       const err = new Error(
         isEmailIssue ? 'Email invalid' : 'Incorrect password'
@@ -88,27 +102,46 @@ export async function authenticateUser({ email, password }) {
     if (netErr.field) {
       throw netErr;
     }
-    // Otherwise it was a network failure, fall back to demo credential check below
+    // Otherwise it was a network failure, proceed to local fallback below
   }
 
-  // 2. Local Demo / Mock Credential Check
-  if (cleanEmail !== DEMO_CREDENTIALS.email) {
-    const err = new Error('Email invalid');
-    err.field = 'email';
-    throw err;
+  // 2. Local Fallback (offline mode / client-only deployment)
+  if (cleanEmail === DEMO_CREDENTIALS.email) {
+    if (cleanPassword !== DEMO_CREDENTIALS.password) {
+      const err = new Error('Incorrect password');
+      err.field = 'password';
+      throw err;
+    }
+  } else {
+    // Personal email account check in local storage
+    const accounts = getLocalAccounts();
+    if (accounts[cleanEmail]) {
+      if (accounts[cleanEmail].password !== cleanPassword) {
+        const err = new Error('Incorrect password');
+        err.field = 'password';
+        throw err;
+      }
+    } else {
+      // Auto-save new personal account
+      accounts[cleanEmail] = {
+        password: cleanPassword,
+        name: cleanEmail.split('@')[0],
+      };
+      saveLocalAccounts(accounts);
+    }
   }
 
-  if (cleanPassword !== DEMO_CREDENTIALS.password) {
-    const err = new Error('Incorrect password');
-    err.field = 'password';
-    throw err;
-  }
+  const rawName = cleanEmail.split('@')[0];
+  const displayName =
+    cleanEmail === DEMO_CREDENTIALS.email
+      ? 'Demo User'
+      : rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
-  const mockToken = 'jwt_mock_token_' + Date.now();
+  const mockToken = 'jwt_' + btoa(cleanEmail) + '_' + Date.now();
   const mockUser = {
-    id: 'user_1',
-    name: 'Demo User',
-    email: DEMO_CREDENTIALS.email,
+    id: 'user_' + Date.now(),
+    name: displayName,
+    email: cleanEmail,
     role: 'user',
   };
 
