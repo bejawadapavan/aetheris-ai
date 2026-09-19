@@ -449,7 +449,7 @@ export default function App() {
           (backendUrl || '/api').trim().replace(/\/+$/, '').endsWith('/chat')
             ? (backendUrl || '/api').trim().replace(/\/+$/, '')
             : `${(backendUrl || '/api').trim().replace(/\/+$/, '')}/chat`,
-          'https://truly-arrangements-belong-row.trycloudflare.com/api/chat',
+          'https://damages-prospects-governor-sullivan.trycloudflare.com/api/chat',
           'http://172.16.4.96:5000/api/chat',
           'http://172.16.4.96:8000/api/chat',
         ];
