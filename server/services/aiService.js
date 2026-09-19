@@ -32,10 +32,6 @@ const PERSONA_PROMPTS = {
 
 /**
  * Advanced Conversational Reasoning Engine with deep Multilingual & Regional NLP.
- * Understands:
- * - Telugu & Telugish (em chestunav, ela unnav, tinnava, bavunnava, etc.)
- * - Hindi & Hinglish (kya kar rahe ho, kaise ho, kya chal raha hai, etc.)
- * - English conversational nuances, questions, and coding tasks.
  */
 function generateIntelligentResponse(userMessage, persona = 'empathetic-friend', language = 'auto') {
   const msg = (userMessage || '').trim();
@@ -46,9 +42,14 @@ function generateIntelligentResponse(userMessage, persona = 'empathetic-friend',
   // 1. TELUGU & TELUGISH (Romanized Telugu)
   // ==========================================
   const isTeluguScript = /[\u0C00-\u0C7F]/.test(msg);
-  const isTelugish = /\b(em|emi|ela|elaa|unnava|unnav|unnaru|chestunav|chestunnav|chestunnaru|tinnava|tinnara|bavunnava|bagunnava|bagunnara|cheppu|cheppandi|enti|sangathulu|katha|ekkada|peru|perenti|avunu|ledu|ra|macha|bro)\b/i.test(normalized);
+  const isTelugish = /\b(em|emi|ela|elaa|unnava|unnav|unnaru|vunnav|chestunav|chestunnav|chestunnaru|chesthav|chesthunnaru|thinava|thinnava|tinnava|thinara|thinnara|tinnara|thintunnava|bhojanam|tiffin|thiffin|breakfast|lunch|dinner|bavunnava|bagunnava|bagunnara|kusalama|kushalama|cheppu|cheppandi|enti|sangathulu|visheshalu|viseshalu|katha|ekkada|ekkadiki|untav|peru|perenti|avunu|ledu|kadha|kada|emo|andi|ra|macha|bro|babu|annaw|anna|mama|dosth|inkenti|evaru|nuvvu|meeru|chala|chaala|manchi|sare|alage|haa|telugu)\b/i.test(normalized);
 
   if (isTeluguScript || isTelugish || language === 'te') {
+    // "thinava" / "thinnava" / "tinnava" -> Did you eat?
+    if (normalized.match(/\b(thinava|thinnava|tinnava|thinara|thinnara|tinnara|thintunnava|bhojanam|tiffin|thiffin|breakfast|lunch|dinner)\b/)) {
+      return `Haha, nenu digital AI ni kada, naku food tho pani ledu! Kaani mee premaki, care ki chaala thanks andi. 😊\n\n(నేను కంప్యూటర్ ప్రోగ్రామ్ ని, నాకు ఆహారం అవసరం లేదు. కానీ మీరు ప్రేమతో అడిగినందుకు ధన్యవాదాలు!)\n\nMeeru thinnara? Eeroju mee special enti?`;
+    }
+
     // "em chestunav" -> What are you doing?
     if (normalized.match(/\b(em|emi)\s*(chestunav|chestunnav|chestunnaru|chesthav|chesthunnaru)\b/) || normalized === 'em chestunav' || normalized === 'em chestunnav') {
       return `Nenu meetho matladadaniki, mee doubts clarify cheyadaniki inka coding lo help cheyadaniki ikkade unnanu! 😊\n\n(నేను మీకు సహాయం చేయడానికి సిద్ధంగా ఉన్నాను!)\n\nMeeru em chestunnaru? Eeroju em vishayam gurinchi matladukundam?`;
@@ -56,12 +57,7 @@ function generateIntelligentResponse(userMessage, persona = 'empathetic-friend',
 
     // "ela unnav" -> How are you?
     if (normalized.match(/\b(ela|elaa)\s*(unnav|unnaru|unnava|vunnav)\b/)) {
-      return `Nenu chaala bagunnanu! Adiginanduku chaala thanks. 😊 Meeru ela ఉన్నారు? Eeroju mee day ela undi?`;
-    }
-
-    // "tinnava" -> Did you eat?
-    if (normalized.match(/\b(tinnava|tinnara|bhojanam)\b/)) {
-      return `Haha, nenu AI ni kada, naku food tho pani ledu! Kaani mee care ki chaala thanks. 😊 Meeru tinnara? Eeroju special enti?`;
+      return `Nenu chaala bagunnanu! Adiginanduku chaala thanks andi. 😊 Meeru ela ఉన్నారు? Eeroju mee day ela nadusthondi?`;
     }
 
     // "bavunnava" / "bagunnava"
@@ -69,17 +65,22 @@ function generateIntelligentResponse(userMessage, persona = 'empathetic-friend',
       return `Chaala bagunnanu! Meetho matladadam eppudu exciting ga untundi. Cheppandi, eeroju em topic discuss cheddam?`;
     }
 
-    // "enti sangathulu"
-    if (normalized.match(/\b(enti|anti)\s*(sangathulu|visheshalu|viseshalu)\b/)) {
+    // "enti sangathulu" / "inkenti"
+    if (normalized.match(/\b(enti|anti|inkenti)\s*(sangathulu|visheshalu|viseshalu)?\b/) || normalized === 'inkenti') {
       return `Antha manchide! Kothaga edaina try cheddama? Coding, tech, stories leda general chat — edaina cheppandi! 🚀`;
     }
 
-    // "ni peru enti" / "perenti"
-    if (normalized.match(/\b(peru|perenti|ni peru|mee peru)\b/)) {
-      return `Naa peru **Aetheris AI**! Nenu meetho Telugu, Hindi, English inka 15+ bhashallo matladagalanu.`;
+    // "ni peru enti" / "nuvvu evaru"
+    if (normalized.match(/\b(peru|perenti|ni peru|mee peru|evaru nuvvu|nuvvu evaru)\b/)) {
+      return `Naa peru **Aetheris AI**! Nenu meetho Telugu, Hindi, English inka 15+ bhashallo matladagalanu. Mee personal intelligent assistant ni!`;
     }
 
-    // General Telugu response
+    // "ekkada untav"
+    if (normalized.match(/\b(ekkada|untav|ekkada untav)\b/)) {
+      return `Nenu cloud lo inka mee system lo untanu! 🌐 Meeku eppudu kavalante appudu oka click tho ready ga untanu.`;
+    }
+
+    // General Telugu friendly response
     return `Namaskaram! Meeru adigindi nenu ardam cheskunnanu: **"${msg}"**。\n\nNenu meetho Telugu lo sahayam cheyadaniki eppudu sidddhanga unnanu. Meeku code kavala, edaina explain cheyala, leda general ga matladala? Cheppandi, shuru cheddam! 😊`;
   }
 
@@ -87,9 +88,12 @@ function generateIntelligentResponse(userMessage, persona = 'empathetic-friend',
   // 2. HINDI & HINGLISH
   // ==========================================
   const isHindiScript = /[\u0900-\u097F]/.test(msg);
-  const isHinglish = /\b(kya|kaise|kaisa|kar|rahe|raha|ho|batao|chal|kuch|naam|suno|theek|badhiya|bhai)\b/i.test(normalized);
+  const isHinglish = /\b(kya|kaise|kaisa|kar|rahe|raha|ho|batao|chal|kuch|naam|suno|theek|badhiya|bhai|khana|khaya)\b/i.test(normalized);
 
   if (isHindiScript || isHinglish || language === 'hi') {
+    if (normalized.match(/\b(khana|khaya|lunch|dinner)\b/)) {
+      return `Haha, main ek AI hoon toh mujhe khane ki zaroorat nahi padti, lekin aapke poochne ke liye bohot shukriya! 😊 Aapne khana kha liya? Aaj kya special bana hai?`;
+    }
     if (normalized.match(/\b(kya|kya\s*kuch)\s*(kar|kr)\s*(rahe|rha)\s*ho\b/)) {
       return `Main bilkul yahan aapki madad ke liye taiyar hoon! 😊 Coding, ideas, writing ya kisi bhi sawaal par baat kar sakte hain. Aap batayein, aap kya kar rahe hain?`;
     }
@@ -115,22 +119,18 @@ function generateIntelligentResponse(userMessage, persona = 'empathetic-friend',
     return `Hello! It's wonderful to connect with you. 😊\n\nI'm **Aetheris AI**, ready with full-stack capabilities, AES-256 encrypted security, and multilingual support.\n\nHow can I help you today? Whether you'd like to brainstorm ideas, write code, solve problems, or just chat, I'm right here!`;
   }
 
-  // "What are you doing" / "What r u doing"
   if (normalized.match(/\b(what|wat)\s*(are|r)\s*(you|u)\s*(doing|up\s*to)\b/)) {
     return `I'm right here, energized and ready to help you! 🚀\n\nI can help you build features, write and debug code, explain complex concepts, translate across 15+ languages, or brainstorm creative ideas. What are you working on right now?`;
   }
 
-  // "How are you"
   if (normalized.match(/\b(how|hows)\s*(are|r)\s*(you|u|things|it\s*going)\b/)) {
     return `I'm doing fantastic, thank you so much for asking! 😊\n\nHow are you doing today? What exciting projects or questions are on your mind?`;
   }
 
-  // "Tell me a joke"
   if (normalized.includes('joke')) {
     return `Why do programmers prefer dark mode?\n\nBecause light attracts bugs! 🐛😄\n\nWant another one, or should we get back to building something awesome?`;
   }
 
-  // "Who created you" / "Who are you"
   if (normalized.includes('who are you') || normalized.includes('what are you') || normalized.includes('who made you')) {
     return `I am **Aetheris AI** — an advanced, multilingual, human-like generative intelligence studio.\n\n- 🛡️ **Security**: End-to-end AES-256-GCM message encryption and JWT token authentication.\n- 🌐 **Multilingual**: Fluent across Telugu, Hindi, English, Spanish, Japanese, and 15+ languages.\n- ⚡ **Full-Stack Architecture**: Dual-port REST/SSE engine on ports 5000 & 8000, linked to MongoDB and deployed 24/7 on the cloud.\n\nHow can I assist you right now?`;
   }
@@ -139,7 +139,7 @@ function generateIntelligentResponse(userMessage, persona = 'empathetic-friend',
   // 4. CODE & PROGRAMMING REQUESTS
   // ==========================================
   if (normalized.includes('code') || normalized.includes('function') || normalized.includes('javascript') || normalized.includes('python') || normalized.includes('react') || normalized.includes('api')) {
-    return `Here is how we can implement this cleanly and efficiently:\n\n\`\`\`javascript\n// Clean, production-grade implementation\nexport async function handleOperation(data) {\n  try {\n    console.log('Processing request:', data);\n    // 1. Validate payload\n    if (!data) throw new Error('Input data is required');\n    \n    // 2. Perform secure operation\n    const result = { success: true, timestamp: Date.now(), data };\n    return result;\n  } catch (err) {\n    console.error('Operation failed:', err.message);\n    throw err;\n  }\n}\n\`\`\`\n\n### Key Highlights:\n- **Error Handling**: Wrapped in try/catch for rock-solid reliability.\n- **Async Architecture**: Non-blocking edge execution.\n\nWould you like me to tailor this for a specific framework or database?`;
+    return `Here is how we can implement this cleanly and efficiently:\n\n\`\`\`javascript\n// Clean, production-grade implementation\nexport async function handleOperation(data) {\n  try {\n    console.log('Processing request:', data);\n    if (!data) throw new Error('Input data is required');\n    \n    const result = { success: true, timestamp: Date.now(), data };\n    return result;\n  } catch (err) {\n    console.error('Operation failed:', err.message);\n    throw err;\n  }\n}\n\`\`\`\n\n### Key Highlights:\n- **Error Handling**: Wrapped in try/catch for rock-solid reliability.\n- **Async Architecture**: Non-blocking edge execution.\n\nWould you like me to tailor this for a specific framework or database?`;
   }
 
   // ==========================================
