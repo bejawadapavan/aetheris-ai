@@ -34,7 +34,7 @@ export const WORLD_LANGUAGES = [
   { code: 'ru', name: 'Russian', flag: '🇷🇺', native: 'Русский', sample: 'Привет! Чем я могу помочь тебе сегодня?' },
   { code: 'ko', name: 'Korean', flag: '🇰🇷', native: '한국어', sample: '안녕하세요! 오늘 어떤 대화를 나누고 싶으신가요?' },
   { code: 'bn', name: 'Bengali', flag: '🇧🇩', native: 'বাংলা', sample: 'নমস্কার! আমি আপনাকে আজ কীভাবে সাহায্য করতে পারি?' },
-  { code: 'nl', name: 'Dutch', flag: '🇳🇱', native: 'Nederlands', sample: 'Hallo! Waar kan ik je vandaag mee van dienst zijn?' },
+  { code: 'te', name: 'Telugu', flag: '🇮🇳', native: 'తెలుగు', sample: 'నమస్కారం! నేను మీకు ఎలా సహాయపడగలను?' },
   { code: 'tr', name: 'Turkish', flag: '🇹🇷', native: 'Türkçe', sample: 'Merhaba! Bugün size nasıl yardımcı olabilirim?' },
 ];
 
@@ -87,7 +87,11 @@ export const PERSONAS = [
 ];
 
 export function getStoredGeminiKey() {
-  return localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '';
+  return (
+    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) ||
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    ''
+  );
 }
 
 export function setStoredGeminiKey(key) {
@@ -99,7 +103,7 @@ export function setStoredGeminiKey(key) {
 }
 
 export function getStoredModel() {
-  return localStorage.getItem(STORAGE_KEYS.SELECTED_MODEL) || 'gemini-3-flash-preview';
+  return localStorage.getItem(STORAGE_KEYS.SELECTED_MODEL) || 'gemini-flash-lite-latest';
 }
 
 export function setStoredModel(modelId) {
@@ -108,28 +112,25 @@ export function setStoredModel(modelId) {
 
 // Multilingual simulated responses in case no key is provided
 const MULTILINGUAL_DEMO_RESPONSES = {
+  te: (msg) =>
+    `Namaskaram! Nenu mee message chusanu: **"${msg}"**。\n\nNenu Aetheris AI — mee multilingual smart assistant ni. Meetho Telugu lo matladadaniki nenu eppudu ready! 😊\n\nMeeru em chestunnaru? Eeroju em topic gurinchi matladukundam?`,
   hi: (msg) =>
-    `नमस्ते! मैंने आपका संदेश प्राप्त किया: **"${msg}"**。\n\nमैं एथेरिस (Aetheris AI) का बहुभाषी ह्यूमन-लाइक मॉडल हूँ। मैं आपके साथ हिंदी में स्वाभाविक और आत्मीय रूप से बातचीत करने के लिए तैयार हूँ।\n\n✨ **सुविधाएँ सक्रिय हैं:**\n- उच्च-गति भाषा समझ (Natural Tone)\n- स्पीच सिंथेसिस (Speech Voice)\n- यदि आप लाइव Gemini 3 Flash API कुंजी जोड़ना चाहते हैं, तो ऊपर दाएँ कोने में ⚙️ **API Key** पर क्लिक करें।\n\nआप आगे क्या जानना या रचना चाहते हैं?`,
+    `नमस्ते! मैंने आपका संदेश प्राप्त किया: **"${msg}"**。\n\nमैं एथेरिस (Aetheris AI) का बहुभाषी ह्यूमन-लाइक मॉडल हूँ। मैं आपके साथ हिंदी में स्वाभाविक और आत्मीय रूप से बातचीत करने के लिए तैयार हूँ।\n\nआप आगे क्या जानना या रचना चाहते हैं?`,
   es: (msg) =>
-    `¡Hola! He recibido tu mensaje: **"${msg}"**。\n\nAetheris AI está funcionando con empatía y fluidez natural en español. Estoy aquí para acompañarte, idear conceptos creativos o asistirte con cualquier desafío técnico.\n\n✨ **Características activas:**\n- Respuestas humanas empáticas\n- Síntesis de voz en español\n- Para conectar tu clave en vivo de Gemini 3 Flash, usa el botón ⚙️ **API Key** arriba a la derecha.\n\n¿En qué te gustaría profundizar hoy?`,
+    `¡Hola! He recibido tu mensaje: **"${msg}"**。\n\nAetheris AI está funcionando con empatía y fluidez natural en español. Estoy aquí para acompañarte, idear conceptos creativos o asistirte con cualquier desafío técnico.`,
   fr: (msg) =>
-    `Bonjour ! J'ai bien reçu votre message : **"${msg}"**。\n\nJe suis Aetheris AI, votre studio conversationnel multilingue. Je réponds avec un ton humain, chaleureux et réfléchi en français.\n\n✨ **Modules actifs :**\n- Compréhension émotionnelle et contextuelle\n- Synthèse vocale française\n- Pour connecter votre clé Gemini 3 Flash, cliquez sur ⚙️ **API Key**.\n\nSur quoi aimeriez-vous que nous travaillions ensemble ?`,
+    `Bonjour ! J'ai bien reçu votre message : **"${msg}"**。\n\nJe suis Aetheris AI, votre studio conversationnel multilingue. Je réponds avec un ton humain, chaleureux et réfléchi en français.`,
   de: (msg) =>
-    `Hallo! Ich habe deine Nachricht erhalten: **"${msg}"**。\n\nWillkommen bei Aetheris AI! Ich antworte dir auf Deutsch mit einer klaren, natürlichen und empathischen menschlichen Stimme.\n\n✨ **Systemstatus:**\n- Mehrsprachige Textgenerierung aktiv\n- Lokale MongoDB-Speicherung aktiv\n- Klicke oben rechts auf ⚙️ **API Key**, um einen echten Gemini 3 Flash Key zu hinterlegen.\n\nWas ist dein nächster Gedanke oder dein nächstes Projekt?`,
+    `Hallo! Ich habe deine Nachricht erhalten: **"${msg}"**。\n\nWillkommen bei Aetheris AI! Ich antworte dir auf Deutsch mit einer klaren, natürlichen und empathischen menschlichen Stimme.`,
   ja: (msg) =>
-    `こんにちは！メッセージを受け取りました: **"${msg}"**。\n\nAetheris AIの多言語ヒューマン対話スタジオへようこそ。自然で温かみのある日本語でお答えします。\n\n✨ **稼働中の機能:**\n- 感情認識と人間味のあるトーン\n- 日本語音声読み上げ (Web Speech API)\n- ライブGemini 3 Flash APIキーの設定は右上の ⚙️ **API Key** から可能です。\n\nどのようなアイデアや質問について話しましょうか？`,
+    `こんにちは！メッセージを受け取りました: **"${msg}"**。\n\nAetheris AIの多言語ヒューマン対話スタジオへようこそ。自然で温かみのある日本語でお答えします。`,
   ar: (msg) =>
-    `مرحباً بك! تلقيت رسالتك: **"${msg}"**。\n\nأنا أثيريس (Aetheris AI)، النموذج متعدد اللغات بلمسة إنسانية دافئة وطبيعية باللغة العربية.\n\n✨ **الميزات المتاحة حالياً:**\n- إدراك السياق والمشاعر الإنسانية\n- نطق صوتي مباشر باللغة العربية\n- يمكنك ربط مفتاح Gemini 3 Flash المباشر من خلال زر ⚙️ **API Key** في الأعلى.\n\nما الذي ترغب في استكشافه أو ابتكاره اليوم؟`,
+    `مرحباً بك! تلقيت رسالتك: **"${msg}"**。\n\nأنا أثيريس (Aetheris AI)، النموذج متعدد اللغات بلمسة إنسانية دافئة وطبيعية باللغة العربية.`,
   zh: (msg) =>
-    `你好！我已收到你的讯息：**"${msg}"**。\n\n我是 Aetheris AI 多语言人性化交互工作室。我能够以流畅、自然且富有共情力的方式用中文与你对话。\n\n✨ **已激活功能：**\n- 拟人化自然语言反馈\n- 中文语音实时朗读\n- 点击右上角 ⚙️ **API Key** 即可轻松配置 Gemini 3 Flash 实时密钥。\n\n今天有什么我们可以一起探讨的精彩想法？`,
+    `你好！我已收到你的讯息：**"${msg}"**。\n\n我是 Aetheris AI 多语言人性化交互工作室。我能够以流畅、自然且富有共情力的方式用中文与你对话。`,
   en: (msg, persona) =>
     `Hello! It's great to connect with you. I received your message:\n\n> "${msg}"\n\n` +
-    `✨ **Aetheris AI Studio is fully live and running in your local environment!**\n\n` +
-    `- **Active Persona**: \`${persona}\`\n` +
-    `- **Multilingual Engine**: Fluent across 15+ world languages\n` +
-    `- **Audio Playback**: Click the Speaker icon to listen out loud with browser Web Speech\n` +
-    `- **Full Stack Architecture**: MongoDB persistence & Express server are actively linked\n\n` +
-    `💡 *Tip: To stream directly from Google's live \`gemini-3-flash-preview\` model, click the **⚙️ API Key** button in the top navigation bar.* What would you like to explore next?`,
+    `I am right here and ready to help you with code, brainstorming, and conversation. What would you like to explore next?`,
 };
 
 export async function generateStudioResponse({
@@ -137,21 +138,24 @@ export async function generateStudioResponse({
   history = [],
   persona = 'empathetic-friend',
   language = 'auto',
-  model = 'gemini-3-flash-preview',
+  model = 'gemini-flash-lite-latest',
   onToken,
 }) {
   const startTime = performance.now();
   const apiKey = getStoredGeminiKey();
 
   // 1. Try Gemini API directly if key is configured
-  if (apiKey && (model.startsWith('gemini') || model === 'gemini-3-flash-preview')) {
+  if (apiKey) {
     try {
-      const targetModel = model === 'gemini-3-flash-preview' ? 'gemini-2.0-flash' : model;
+      const targetModel = 'gemini-flash-lite-latest';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
       const systemPrompt =
         `You are Aetheris, an ultra-advanced, human-like AI companion. ` +
         `Adopt the tone: ${persona}. ` +
+        `- Answer EVERY single question thoughtfully, naturally, and helpfully.\n` +
+        `- If the user writes in Telugu script or Telugish (English alphabet Telugu like "em chestunav", "thinava", "ela unnav"), ALWAYS respond in fluent, authentic conversational Telugu or Telugish!\n` +
+        `- If the user writes in Hindi/Hinglish, respond in natural Hindi.\n` +
         (language !== 'auto'
           ? `Strictly respond in language code: ${language}. `
           : `Detect the user's language and respond fluently in that exact same language. `) +
