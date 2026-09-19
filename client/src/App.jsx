@@ -406,27 +406,42 @@ export default function App() {
         }
       }
 
-      // 2. Try Backend Gateway (/api/chat) if Gemini direct wasn't used or failed
+      // 2. Try Backend Gateway (/api/chat) with multi-network mobile fallback
       if (!replyContent) {
-        try {
-          const cleanBackend = (backendUrl || '/api').trim().replace(/\/+$/, '');
-          const chatEndpoint = cleanBackend.endsWith('/chat') ? cleanBackend : `${cleanBackend}/chat`;
-          const res = await fetch(chatEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({
-              message: text,
-              persona,
-              language: selectedLanguage !== 'auto' ? selectedLanguage : detected,
-            }),
-          });
+        const candidateEndpoints = [
+          (backendUrl || '/api').trim().replace(/\/+$/, '').endsWith('/chat')
+            ? (backendUrl || '/api').trim().replace(/\/+$/, '')
+            : `${(backendUrl || '/api').trim().replace(/\/+$/, '')}/chat`,
+          'https://truly-arrangements-belong-row.trycloudflare.com/api/chat',
+          'http://172.16.4.96:5000/api/chat',
+          'http://172.16.4.96:8000/api/chat',
+        ];
 
-          if (res.ok) {
-            const data = await res.json();
-            replyContent = data.reply || data.response || data.message || '';
+        for (const endpoint of candidateEndpoints) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                message: text,
+                persona,
+                language: selectedLanguage !== 'auto' ? selectedLanguage : detected,
+              }),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+              const data = await res.json();
+              replyContent = data.reply || data.response || data.message || '';
+              if (replyContent) break;
+            }
+          } catch (backendErr) {
+            console.warn(`[Aetheris] Candidate endpoint ${endpoint} unreachable:`, backendErr.message);
           }
-        } catch (backendErr) {
-          console.warn('[Aetheris] Backend gateway unreachable, using neural fallback:', backendErr.message);
         }
       }
 
