@@ -112,8 +112,19 @@ export function setStoredModel(modelId) {
 
 // Multilingual simulated responses in case no key is provided
 const MULTILINGUAL_DEMO_RESPONSES = {
-  te: (msg) =>
-    `Namaskaram! Nenu mee message chusanu: **"${msg}"**。\n\nNenu Aetheris AI — mee multilingual smart assistant ni. Meetho Telugu lo matladadaniki nenu eppudu ready! 😊\n\nMeeru em chestunnaru? Eeroju em topic gurinchi matladukundam?`,
+  te: (msg) => {
+    const clean = (msg || '').trim().toLowerCase();
+    if (clean.includes('thinav') || clean.includes('tinnav') || clean.includes('tinnara') || clean.includes('tinnava')) {
+      return `Nenu software avatar ni kada, nenu bhojanam cheyanu! 😂 Kani mee care ki chala thanks! Meeru tinnara? Eeroju mee menu lo special enti?`;
+    }
+    if (clean.includes('em chestun') || clean.includes('em chestunav') || clean.includes('em chestunnaru')) {
+      return `Meetho matladutu, mee questions ki assist chestu unnanu! 😊 Eeroju meeku em help kavali? Edaina code gurinchi or interesting topic gurinchi matladukundama?`;
+    }
+    if (clean.includes('ela unnav') || clean.includes('ela unnaru')) {
+      return `Nenu chala bagunnanu, thank you! Meeru ela unnaru? Eeroju mee day ela nadustondi?`;
+    }
+    return `Namaskaram! Nenu mee message chusanu: "${msg}".\n\nNenu Aetheris AI — mee Telugu smart companion ni. Meetho Telugu lo matladadaniki nenu eppudu ready! 😊\n\nMeeru em telusukovalani anukuntunnaru? Cheppandi, manam detail ga matladukundam!`;
+  },
   hi: (msg) =>
     `नमस्ते! मैंने आपका संदेश प्राप्त किया: **"${msg}"**。\n\nमैं एथेरिस (Aetheris AI) का बहुभाषी ह्यूमन-लाइक मॉडल हूँ। मैं आपके साथ हिंदी में स्वाभाविक और आत्मीय रूप से बातचीत करने के लिए तैयार हूँ।\n\nआप आगे क्या जानना या रचना चाहते हैं?`,
   es: (msg) =>
@@ -123,7 +134,7 @@ const MULTILINGUAL_DEMO_RESPONSES = {
   de: (msg) =>
     `Hallo! Ich habe deine Nachricht erhalten: **"${msg}"**。\n\nWillkommen bei Aetheris AI! Ich antworte dir auf Deutsch mit einer klaren, natürlichen und empathischen menschlichen Stimme.`,
   ja: (msg) =>
-    `こんにちは！メッセージを受け取りました: **"${msg}"**。\n\nAetheris AIの多言語ヒューマン対話スタジオへようこそ。自然で温かみのある日本語でお答えします。`,
+    `こんにちは！メッセージを受け取りました: **"${msg}"**。\n\nAetheris AIの多言語ヒューマン対话スタジオへようこそ。自然で温かみのある日本語でお答えします。`,
   ar: (msg) =>
     `مرحباً بك! تلقيت رسالتك: **"${msg}"**。\n\nأنا أثيريس (Aetheris AI)، النموذج متعدد اللغات بلمسة إنسانية دافئة وطبيعية باللغة العربية.`,
   zh: (msg) =>
@@ -280,12 +291,24 @@ export async function generateStudioResponse({
   // Check if message itself has hindi or non-english scripts
   let chosenGenerator = MULTILINGUAL_DEMO_RESPONSES[langKey];
   if (language === 'auto') {
-    if (/[\u0900-\u097F]/.test(message)) chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.hi;
-    else if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(message)) chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.ja;
-    else if (/[\u0600-\u06FF]/.test(message)) chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.ar;
-    else if (/\b(hola|gracias|buenos|que|por favor)\b/i.test(message)) chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.es;
-    else if (/\b(bonjour|merci|comment|oui|avec)\b/i.test(message)) chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.fr;
-    else if (/\b(hallo|danke|guten|wie|bitte)\b/i.test(message)) chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.de;
+    if (
+      /[\u0C00-\u0C7F]/.test(message) ||
+      /\b(em\s*chestun|thinav|tinnav|tinnara|ela\s*unnav|enti|eeroju|cheppu|bavunnava|kushalama|namaskaram|avunu|ledu|chala|bagundi|emiti|meeru|nenu)\b/i.test(message)
+    ) {
+      chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.te;
+    } else if (/[\u0900-\u097F]/.test(message) || /\b(kaise|kya|namaste|theek|kuch|batao|shukriya|accha)\b/i.test(message)) {
+      chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.hi;
+    } else if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(message)) {
+      chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.ja;
+    } else if (/[\u0600-\u06FF]/.test(message)) {
+      chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.ar;
+    } else if (/\b(hola|gracias|buenos|que|por favor)\b/i.test(message)) {
+      chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.es;
+    } else if (/\b(bonjour|merci|comment|oui|avec)\b/i.test(message)) {
+      chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.fr;
+    } else if (/\b(hallo|danke|guten|wie|bitte)\b/i.test(message)) {
+      chosenGenerator = MULTILINGUAL_DEMO_RESPONSES.de;
+    }
   }
 
   const responseText = chosenGenerator(message, persona);
